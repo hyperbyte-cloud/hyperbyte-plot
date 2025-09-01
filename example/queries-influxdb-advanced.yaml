@@ -1,0 +1,38 @@
+backend: influxdb
+influxdb:
+  url: "http://localhost:8086"
+  token: "your-influxdb-token-here"
+  org: "your-organization"
+  bucket: "telegraf"
+
+queries:
+  - name: Avg CPU Usage
+    expr: |
+      from(bucket: "telegraf")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r._measurement == "cpu" and r._field == "usage_active")
+      |> mean()
+      |> yield(name: "mean")
+  
+  - name: Memory Available
+    expr: |
+      from(bucket: "telegraf")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r._measurement == "mem" and r._field == "available")
+      |> last()
+  
+  - name: Disk IO Rate
+    expr: |
+      from(bucket: "telegraf")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r._measurement == "diskio" and r._field == "reads")
+      |> derivative(unit: 1s, nonNegative: true)
+      |> mean()
+  
+  - name: Network Throughput
+    expr: |
+      from(bucket: "telegraf")
+      |> range(start: -5m)
+      |> filter(fn: (r) => r._measurement == "net" and r._field == "bytes_sent")
+      |> derivative(unit: 1s, nonNegative: true)
+      |> sum()

@@ -1,0 +1,10 @@
+prometheus:
+  url: "http://localhost:9090"
+
+queries:
+  - name: CPU Usage
+    expr: rate(node_cpu_seconds_total{mode="user"}[5m])
+  - name: Memory Usage
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+  - name: Disk IO
+    expr: rate(node_disk_reads_completed_total[5m])

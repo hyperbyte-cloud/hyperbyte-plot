@@ -1,0 +1,16 @@
+backend: influxdb
+influxdb:
+  url: "http://localhost:8086"
+  token: "your-influxdb-token-here"
+  org: "your-organization"
+  bucket: "metrics"
+
+queries:
+  - name: CPU Usage
+    expr: 'r._measurement == "cpu" and r._field == "usage_percent"'
+  - name: Memory Usage
+    expr: 'r._measurement == "mem" and r._field == "used_percent"'
+  - name: Disk Usage
+    expr: 'r._measurement == "disk" and r._field == "used_percent"'
+  - name: Network Bytes
+    expr: 'r._measurement == "net" and r._field == "bytes_recv"'

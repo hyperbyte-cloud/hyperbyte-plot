@@ -1,0 +1,49 @@
+backend: influxdb1
+influxdb1:
+  url: "http://localhost:8086"
+  username: "monitoring"
+  password: "secret"
+  database: "metrics"
+
+queries:
+  - name: Avg CPU Load
+    expr: |
+      SELECT mean("load1") 
+      FROM "system" 
+      WHERE time >= now() - 5m 
+      GROUP BY time(1m) 
+      ORDER BY time DESC 
+      LIMIT 1
+  
+  - name: Memory Available
+    expr: |
+      SELECT last("available") 
+      FROM "mem" 
+      WHERE time >= now() - 5m
+  
+  - name: Disk IO Rate
+    expr: |
+      SELECT derivative(mean("reads"), 1s) 
+      FROM "diskio" 
+      WHERE time >= now() - 5m 
+      GROUP BY time(30s) 
+      ORDER BY time DESC 
+      LIMIT 1
+  
+  - name: Network Throughput
+    expr: |
+      SELECT derivative(mean("bytes_sent"), 1s) 
+      FROM "net" 
+      WHERE time >= now() - 5m 
+      GROUP BY time(30s) 
+      ORDER BY time DESC 
+      LIMIT 1
+
+  - name: HTTP Response Time
+    expr: |
+      SELECT percentile("response_time", 95) 
+      FROM "http_response" 
+      WHERE time >= now() - 5m 
+      GROUP BY time(1m) 
+      ORDER BY time DESC 
+      LIMIT 1

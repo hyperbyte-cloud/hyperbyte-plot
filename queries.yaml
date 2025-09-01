@@ -1,0 +1,14 @@
+backend: influxdb1
+influxdb1:
+  url: "http://10.10.50.14:8086"
+  database: "server"
+
+queries:
+  - name: CPU Usage
+    expr: 'SELECT mean("usage_idle") FROM "cpu" WHERE time >= now() - 30m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+  - name: Memory Usage
+    expr: 'SELECT mean("used_percent") FROM "mem" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+  - name: Disk Usage
+    expr: 'SELECT mean("used_percent") FROM "disk" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+  - name: Network Bytes
+    expr: 'SELECT mean("bytes_recv") FROM "net" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'

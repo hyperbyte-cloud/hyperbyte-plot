@@ -1,0 +1,13 @@
+backend: mock
+mock:
+  seed: 12345
+
+queries:
+  - name: "CPU Usage %"
+    expr: 'cpu_usage'
+  - name: "Memory Usage MB"
+    expr: 'memory_usage'
+  - name: "Disk Usage %"
+    expr: 'disk_usage'
+  - name: "Network Bytes/sec"
+    expr: 'network_bytes'

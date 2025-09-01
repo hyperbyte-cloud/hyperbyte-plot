@@ -1,0 +1,13 @@
+backend: prometheus
+prometheus:
+  url: "http://localhost:9090"
+
+queries:
+  - name: "HTTP Requests/sec"
+    expr: 'rate(http_requests_total[5m])'
+  - name: "CPU Usage %"
+    expr: '100 - (rate(node_cpu_seconds_total{mode="idle"}[5m]) * 100)'
+  - name: "Memory Usage MB"
+    expr: 'node_memory_MemAvailable_bytes / 1024 / 1024'
+  - name: "Disk I/O ops/sec"
+    expr: 'rate(node_disk_io_time_seconds_total[5m])'
