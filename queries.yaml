@@ -7,8 +7,9 @@ queries:
   - name: CPU Usage
     expr: 'SELECT mean("usage_idle") FROM "cpu" WHERE time >= now() - 30m GROUP BY time(1m) fill(0) ORDER BY time DESC'
   - name: Memory Usage
-    expr: 'SELECT mean("used_percent") FROM "mem" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+    expr: 'SELECT mean("used_percent") FROM "mem" WHERE time >= now() - 30m GROUP BY time(1m) fill(0) ORDER BY time DESC'
   - name: Disk Usage
-    expr: 'SELECT mean("used_percent") FROM "disk" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'
-  - name: Network Bytes
-    expr: 'SELECT mean("bytes_recv") FROM "net" WHERE time >= now() - 5m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+    expr: 'SELECT mean("used_percent") FROM "disk" WHERE time >= now() - 30m GROUP BY time(1m) fill(0) ORDER BY time DESC'
+  - name: Network Bytes In (Updated)
+    expr: 'SELECT derivative(first(bytes_recv), 1s) * 8 FROM net WHERE interface =~ /(vlan|eth|bond|vmbr|ens|eno|ixl|gb|enp).*/ AND interface !~ /veth/ AND time >= now() - 5m GROUP BY time(1m) fill(null)'
+

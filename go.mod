@@ -1,4 +1,4 @@
-module promviz
+module hyperbyte-plot
 
 go 1.23.0
 

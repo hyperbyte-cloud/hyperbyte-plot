@@ -21,22 +21,27 @@ type QueryHistory struct {
 
 // TUI represents the terminal user interface
 type TUI struct {
-	app        *tview.Application
-	flex       *tview.Flex
-	scrollView *tview.Flex
-	panels     []*tview.TextView
-	timeRange  *tview.TextView
-	focusIndex int
-	histories  []*QueryHistory
-	onQuit     func()
+	app           *tview.Application
+	flex          *tview.Flex
+	scrollView    *tview.Flex
+	panels        []*tview.TextView
+	timeRange     *tview.TextView
+	focusIndex    int
+	scrollOffset  int // Track horizontal scroll position
+	visiblePanels int // Number of panels visible at once
+	histories     []*QueryHistory
+	onQuit        func()
 }
 
 // NewTUI creates a new terminal user interface
 func NewTUI(queries []backend.Query, onQuit func()) *TUI {
 	tui := &TUI{
-		app:       tview.NewApplication(),
-		histories: make([]*QueryHistory, len(queries)),
-		onQuit:    onQuit,
+		app:           tview.NewApplication(),
+		histories:     make([]*QueryHistory, len(queries)),
+		onQuit:        onQuit,
+		focusIndex:    0,
+		scrollOffset:  0,
+		visiblePanels: 3, // Default to showing 3 panels at once
 	}
 
 	// Initialize query histories
@@ -61,6 +66,7 @@ func (t *TUI) setupUI(queries []backend.Query) {
 	t.scrollView = tview.NewFlex().SetDirection(tview.FlexColumn)
 	t.panels = make([]*tview.TextView, len(queries))
 
+	// Create all panels but don't add them to scrollView yet
 	for i, query := range queries {
 		panel := tview.NewTextView()
 		panel.SetTitle(fmt.Sprintf(" %s ", query.Name))
@@ -70,14 +76,19 @@ func (t *TUI) setupUI(queries []backend.Query) {
 		panel.SetWordWrap(false)
 
 		t.panels[i] = panel
-		// Each panel takes equal width, with minimum of 1/3 screen for 3+ panels
-		if len(queries) <= 2 {
-			t.scrollView.AddItem(panel, 0, 1, i == 0)
-		} else {
-			// For 3+ panels, make them wider so they need horizontal scrolling
-			t.scrollView.AddItem(panel, 80, 0, i == 0)
-		}
 	}
+
+	// Adjust visible panels based on total number
+	if len(queries) <= 2 {
+		t.visiblePanels = len(queries)
+	} else if len(queries) == 3 {
+		t.visiblePanels = 3
+	} else {
+		t.visiblePanels = 3 // Show max 3 panels at once for 4+ queries
+	}
+
+	// Initialize the scroll view with visible panels
+	t.updateScrollView()
 
 	// Add time range display at the bottom
 	t.timeRange = tview.NewTextView()
@@ -121,10 +132,69 @@ func (t *TUI) setupUI(queries []backend.Query) {
 	t.updateFocus()
 }
 
+// updateScrollView refreshes the scroll view to show the correct panels
+func (t *TUI) updateScrollView() {
+	// Clear the current scroll view
+	t.scrollView.Clear()
+
+	if len(t.panels) == 0 {
+		return
+	}
+
+	// Calculate which panels should be visible
+	maxOffset := len(t.panels) - t.visiblePanels
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+
+	// Ensure scroll offset is within bounds
+	if t.scrollOffset > maxOffset {
+		t.scrollOffset = maxOffset
+	}
+	if t.scrollOffset < 0 {
+		t.scrollOffset = 0
+	}
+
+	// Add visible panels to the scroll view
+	endIndex := t.scrollOffset + t.visiblePanels
+	if endIndex > len(t.panels) {
+		endIndex = len(t.panels)
+	}
+
+	for i := t.scrollOffset; i < endIndex; i++ {
+		panel := t.panels[i]
+		t.scrollView.AddItem(panel, 0, 1, i == t.focusIndex)
+	}
+}
+
+// scrollToShowFocus adjusts scroll offset to ensure focused panel is visible
+func (t *TUI) scrollToShowFocus() {
+	if len(t.panels) == 0 {
+		return
+	}
+
+	// Check if focused panel is visible in current scroll view
+	visibleStart := t.scrollOffset
+	visibleEnd := t.scrollOffset + t.visiblePanels - 1
+
+	// If focus is to the right of visible area, scroll right
+	if t.focusIndex > visibleEnd {
+		t.scrollOffset = t.focusIndex - t.visiblePanels + 1
+	}
+	// If focus is to the left of visible area, scroll left
+	if t.focusIndex < visibleStart {
+		t.scrollOffset = t.focusIndex
+	}
+
+	// Update the scroll view with new offset
+	t.updateScrollView()
+}
+
 // focusNext moves focus to the next panel
 func (t *TUI) focusNext() {
 	if len(t.panels) > 0 {
 		t.focusIndex = (t.focusIndex + 1) % len(t.panels)
+		t.scrollToShowFocus()
 		t.updateFocus()
 	}
 }
@@ -133,6 +203,7 @@ func (t *TUI) focusNext() {
 func (t *TUI) focusPrev() {
 	if len(t.panels) > 0 {
 		t.focusIndex = (t.focusIndex - 1 + len(t.panels)) % len(t.panels)
+		t.scrollToShowFocus()
 		t.updateFocus()
 	}
 }
@@ -143,6 +214,7 @@ func (t *TUI) updateFocus() {
 		return
 	}
 
+	// Update border colors for all panels
 	for i, panel := range t.panels {
 		if i == t.focusIndex {
 			panel.SetBorderColor(tcell.ColorYellow)
@@ -152,8 +224,13 @@ func (t *TUI) updateFocus() {
 			panel.SetTitleColor(tcell.ColorWhite)
 		}
 	}
-	// Ensure focused panel is visible by setting focus
-	t.app.SetFocus(t.panels[t.focusIndex])
+
+	// Set app focus to the focused panel (if it's currently visible)
+	visibleStart := t.scrollOffset
+	visibleEnd := t.scrollOffset + t.visiblePanels - 1
+	if t.focusIndex >= visibleStart && t.focusIndex <= visibleEnd {
+		t.app.SetFocus(t.panels[t.focusIndex])
+	}
 }
 
 // updateTimeRange updates the time range display based on current data
@@ -254,8 +331,29 @@ func (t *TUI) renderTimeSeriesGraph(index int) {
 	_, _, width, height := panel.GetInnerRect()
 
 	// Calculate graph dimensions (leave space for text)
-	graphWidth := width - 7   // Leave margin
-	graphHeight := height - 6 // Leave space for title and current value
+	// Calculate margin based on max y value digits + 4 for outline space
+	maxY := values[0]
+	minY := values[0]
+	for _, v := range values {
+		if v > maxY {
+			maxY = v
+		}
+		if v < minY {
+			minY = v
+		}
+	}
+	// Find the largest absolute value for y-axis
+	absMaxY := maxY
+	if -minY > maxY {
+		absMaxY = -minY
+	}
+	yDigits := len(fmt.Sprintf("%.0f", absMaxY))
+	if absMaxY < 0 {
+		yDigits++ // for negative sign
+	}
+	margin := yDigits + 7
+	graphWidth := width - margin // Leave margin based on y-axis label width
+	graphHeight := height - 6    // Leave space for title and current value
 
 	// Ensure minimum dimensions
 	if graphWidth < 20 {
