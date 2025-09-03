@@ -1,6 +1,6 @@
-# PromViz
+# hyperbyte-plot
 
-A modular Go CLI tool that visualizes metrics from various data sources (currently Prometheus) with live-updating ASCII graphs in a terminal UI.
+A modular Go CLI tool that visualizes metrics from various data sources with live-updating ASCII graphs in a terminal UI.
 
 ## Features
 
@@ -17,23 +17,23 @@ A modular Go CLI tool that visualizes metrics from various data sources (current
 ```bash
 # Clone and build
 git clone <your-repo-url>
-cd hyperbyte-promviz
-go build -o promviz main.go
+cd hyperbyte-hyperbyte-plot
+go build -o hyperbyte-plot main.go
 ```
 
 ## Usage
 
 ```bash
 # Run with default config file (queries.yaml)
-./promviz
+./hyperbyte-plot
 
 # Run with custom config file
-./promviz --config /path/to/config.yaml
+./hyperbyte-plot --config /path/to/config.yaml
 ```
 
 ## Configuration
 
-PromViz supports multiple backend data sources through YAML configuration.
+hyperbyte-plot supports multiple backend data sources through YAML configuration.
 
 ### Prometheus Configuration
 
@@ -163,7 +163,7 @@ The tool provides meaningful error messages for:
 
 ## Architecture
 
-PromViz uses a modular architecture that makes it easy to add support for new data sources:
+hyperbyte-plot uses a modular architecture that makes it easy to add support for new data sources:
 
 - **`internal/app`** - Application orchestration and lifecycle management
 - **`internal/backend`** - Pluggable backend interface with implementations:
@@ -185,7 +185,7 @@ To add support for a new data source (e.g., InfluxDB, TimescaleDB):
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed instructions and examples.
 
-## Extending PromViz
+## Extending hyperbyte-plot
 
 The modular design allows for easy extension:
 
